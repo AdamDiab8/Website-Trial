@@ -1,0 +1,19 @@
+Add subtle scroll parallax to the site using Framer Motion ONLY. Do NOT install GSAP, 
+Lenis, or any other scroll library — we already use framer-motion and want to avoid a 
+second animation engine or any smooth-scroll hijacking.
+
+Create a small reusable helper (e.g. useParallax hook or a <Parallax> wrapper) that 
+shifts an element's Y based on scroll position using framer-motion's useScroll + 
+useTransform. It must respect prefers-reduced-motion: if the user opts out, apply no 
+movement.
+
+Apply it GENTLY (max ~40-60px of drift — depth, not motion sickness) in these places:
+1. Hero: the background video/particle layer drifts slightly slower than the foreground 
+   headline + CTA as the user scrolls past, creating depth.
+2. Customer-segment images (or the flip-card section if already converted): each image 
+   drifts slightly within its frame as its section moves through the viewport.
+3. Bell Labs band and any other large background image: subtle background drift.
+
+This is depth only — do not change layout, content, or existing effects. Keep it 
+transform-based and performant (no layout thrash). Test that scrolling stays smooth 
+with the existing particle canvas, WebGL shader, and coverflow all present.

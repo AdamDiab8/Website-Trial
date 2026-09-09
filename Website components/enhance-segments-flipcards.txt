@@ -1,0 +1,114 @@
+You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure
+- Tailwind CSS
+- Typescript
+
+Determine the default path for components and styles (should be /components/ui).
+
+=== USE CASE FOR THIS PROJECT ===
+Replace the 3 customer-segment blocks (currently full-width alternating image/text rows)
+with a row of 3 FLIP CARDS sitting NEXT TO EACH OTHER (3-up on desktop, stacking to 1 
+column on mobile). Each card:
+  FRONT = image + title + one short line
+  BACK  = full description + a "Discover" button
+The 3 segments and their content:
+  1. AI and cloud providers
+     front line: "Scale faster with advanced optical and IP connectivity."
+     back: "Scale the interconnection and operations of your network infrastructure 
+            with advanced optical, IP and datacenter switching technologies."
+     button: "Discover solutions"  | image: /images/segments/seg-ai-cloud.jpg
+  2. Telecommunication providers
+     front line: "High performance, secure connectivity for the AI era."
+     back: "Evolving networks to deliver high performance, secure connectivity ready to 
+            seize the opportunities of AI across mobile, fixed and transport."
+     button: "Discover solutions"  | image: /images/segments/seg-telecom.jpg
+  3. Mission-critical enterprises
+     front line: "Operate securely with high-performance connectivity."
+     back: "Secure, high-performance private networking for industry, transport, energy 
+            and the public sector — connectivity you can rely on."
+     button: "Discover solutions"  | image: /images/segments/seg-mission-critical.jpg
+
+STYLE: dark theme to match the rest of the site (use the site's dark navy surface, 
+light text, Nokia blue #124191 for the Discover button and accents). Cards equal height, 
+consistent sizing, good spacing in a 3-up grid.
+
+Copy-paste this component to /components/ui folder:
+```tsx
+flipping-card.tsx
+import React from "react";
+import { cn } from "@/lib/utils";
+
+interface FlippingCardProps {
+  className?: string;
+  height?: number;
+  width?: number;
+  frontContent?: React.ReactNode;
+  backContent?: React.ReactNode;
+}
+
+export function FlippingCard({
+  className,
+  frontContent,
+  backContent,
+  height = 380,
+  width = 350,
+}: FlippingCardProps) {
+  return (
+    <div
+      className="group/flipping-card [perspective:1000px]"
+      style={
+        {
+          "--height": `${height}px`,
+          "--width": `${width}px`,
+        } as React.CSSProperties
+      }
+    >
+      <div
+        className={cn(
+          "relative rounded-xl border border-neutral-800 bg-neutral-950 shadow-lg transition-all duration-700 [transform-style:preserve-3d] group-hover/flipping-card:[transform:rotateY(180deg)]",
+          "h-[var(--height)] w-full max-w-[var(--width)]",
+          className
+        )}
+      >
+        {/* Front Face */}
+        <div className="absolute inset-0 h-full w-full rounded-[inherit] bg-[#0f1626] text-neutral-50 [transform-style:preserve-3d] [backface-visibility:hidden] [transform:rotateY(0deg)]">
+          <div className="[transform:translateZ(70px)_scale(.93)] h-full w-full">
+            {frontContent}
+          </div>
+        </div>
+        {/* Back Face */}
+        <div className="absolute inset-0 h-full w-full rounded-[inherit] bg-[#0f1626] text-neutral-50 [transform-style:preserve-3d] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+          <div className="[transform:translateZ(70px)_scale(.93)] h-full w-full">
+            {backContent}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+Then build a CustomerSegments section that renders 3 of these in a responsive grid 
+(grid-cols-1 md:grid-cols-3, gap, centered, max-width container) using the content above.
+Front face: image fills the top (object-cover, rounded), title (semibold) + short line 
+below. Back face: centered full description + a Nokia-blue "Discover solutions" button.
+
+=== AMENDMENTS vs the stock 21st.dev component ===
+1. Card faces recolored to the dark theme (bg #0f1626, light text, border neutral-800) 
+   instead of white/light default.
+2. Default height raised to 380 and width made responsive (w-full max-w) so 3 sit 
+   cleanly side by side and stack on mobile.
+3. Content replaced with the 3 Nokia segments above; button label "Discover solutions", 
+   styled Nokia blue (#124191).
+
+=== ACCESSIBILITY ===
+- Cards flip on hover AND on keyboard focus (focus-within), so keyboard users can reach 
+  the back and its button. Respect prefers-reduced-motion: if set, show the back content 
+  without the 3D flip (e.g. cross-fade or just show front with the CTA visible).
+- Ensure the "Discover" button is reachable/clickable when flipped.
+
+=== STILL FOR THE AGENT ===
+- Make sure the 3 segment images exist at /public/images/segments/.
+- Match card surface color to whatever token the dark theme pass uses site-wide.

@@ -1,0 +1,185 @@
+You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure
+- Tailwind CSS
+- Typescript
+
+Determine the default path for components and styles (should be /components/ui).
+
+INSTALL: framer-motion (already present in this project — no new dependency needed).
+
+=== USE CASE FOR THIS PROJECT ===
+Use this hover-to-expand gallery for the "Explore the latest from Nokia" section (the 
+3-item insights strip). On hover, the hovered panel grows and the others shrink. 
+IMPORTANT: the real section is NOT just images — each of the 3 items has a category 
+label, a headline, and a link. So this component must be EXTENDED to overlay that text 
+on each panel and make each panel a link. Keep the expand-on-hover behavior; the 
+fullscreen image lightbox is optional (see note).
+
+The 3 items:
+  1. label "ARTICLE" | headline "Why Digital Air Traffic Management Depends on the 
+     Communications Network Beneath It" | image /images/insights/insight-atm.jpg
+  2. label "BLOG" | headline "Why does AI-ready healthcare depend on deterministic, 
+     resilient, secure optical network infrastructure?" | image 
+     /images/insights/insight-healthcare.jpeg
+  3. label "VIDEO" | headline "Faster, safer broadband for Saudi Arabia: Inside ACES's 
+     Nokia-powered network" | image /images/insights/insight-aces.jpg  (show a play 
+     button overlay on this one since it's a video)
+
+Below the gallery keep the 3 sub-links: "More insights", "More from our blog", 
+"More customer successes".
+
+STYLE: dark theme to match the rest of the site (dark navy surface behind the section, 
+light text). Category label in muted light gray/upper-case, headline in white/semibold, 
+gradient scrim at the bottom of each panel so text stays readable over the image. 
+Nokia-blue (#124191) accents on hover.
+
+Copy-paste this component to /components/ui folder (then EXTEND it per the amendments 
+below — do not leave it image-only):
+```tsx
+gallery-animation.tsx
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface GalleryItem {
+  image: string;
+  label: string;
+  headline: string;
+  href?: string;
+  isVideo?: boolean;
+}
+
+interface ExpandableGalleryProps {
+  items: GalleryItem[];
+  className?: string;
+}
+
+const ExpandableGallery: React.FC<ExpandableGalleryProps> = ({ items, className = '' }) => {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const getFlexValue = (index: number) => {
+    if (hoveredIndex === null) return 1;
+    return hoveredIndex === index ? 2 : 0.5;
+  };
+
+  return (
+    <div className={className}>
+      <div className="flex gap-2 h-96 w-full">
+        {items.map((item, index) => (
+          <motion.a
+            key={index}
+            href={item.href || "#"}
+            className="relative cursor-pointer overflow-hidden rounded-md block"
+            style={{ flex: 1 }}
+            animate={{ flex: getFlexValue(index) }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+          >
+            <img
+              src={item.image}
+              alt={item.headline}
+              className="w-full h-full object-cover"
+            />
+            {/* readability scrim */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+            {/* video play badge */}
+            {item.isVideo && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[#124191] ml-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+            )}
+            {/* text overlay */}
+            <div className="absolute bottom-0 left-0 right-0 p-5">
+              <span className="text-xs font-semibold tracking-widest uppercase text-neutral-300">
+                {item.label}
+              </span>
+              <h3 className="mt-2 text-white font-semibold text-lg leading-snug">
+                {item.headline}
+              </h3>
+            </div>
+          </motion.a>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export function Component() {
+  const items: GalleryItem[] = [
+    {
+      image: "/images/insights/insight-atm.jpg",
+      label: "ARTICLE",
+      headline: "Why Digital Air Traffic Management Depends on the Communications Network Beneath It",
+      href: "#",
+    },
+    {
+      image: "/images/insights/insight-healthcare.jpeg",
+      label: "BLOG",
+      headline: "Why does AI-ready healthcare depend on deterministic, resilient, secure optical network infrastructure?",
+      href: "#",
+    },
+    {
+      image: "/images/insights/insight-aces.jpg",
+      label: "VIDEO",
+      headline: "Faster, safer broadband for Saudi Arabia: Inside ACES's Nokia-powered network",
+      href: "#",
+      isVideo: true,
+    },
+  ];
+
+  return (
+    <section className="w-full bg-[#0a0f1a] py-20 px-6">
+      <div className="max-w-7xl mx-auto">
+        <h2 className="text-3xl md:text-4xl font-bold text-white mb-10">
+          Explore the latest from Nokia
+        </h2>
+        <ExpandableGallery items={items} className="w-full" />
+        <div className="flex flex-wrap gap-8 mt-8">
+          <a href="#" className="text-[#5b8dd9] hover:text-white transition-colors font-semibold">More insights →</a>
+          <a href="#" className="text-[#5b8dd9] hover:text-white transition-colors font-semibold">More from our blog →</a>
+          <a href="#" className="text-[#5b8dd9] hover:text-white transition-colors font-semibold">More customer successes →</a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+demo.tsx
+import { Component } from "@/components/ui/gallery-animation";
+
+export default function DemoOne() {
+  return <Component />;
+}
+```
+
+=== AMENDMENTS vs the stock 21st.dev component ===
+1. Changed the data model from a plain string[] of images to an items[] with 
+   {image, label, headline, href, isVideo} — the section needs category + headline + 
+   link per panel, not just images.
+2. Overlaid each panel with a category label + headline and a bottom gradient scrim for 
+   readability; made each panel a clickable link (motion.a).
+3. Added a play-button badge for the VIDEO item (ACES).
+4. Removed the fullscreen lightbox/modal (the real section links out to articles rather 
+   than opening a photo viewer). If you'd rather keep the lightbox for the video item 
+   only, tell the agent and it can re-add a modal that embeds the YouTube video instead 
+   of showing the image full-screen.
+5. Recolored to the dark theme (bg #0a0f1a, white headlines, #5b8dd9 sub-links) and 
+   wired in the 3 real Nokia items + their images.
+
+=== ACCESSIBILITY / RESPONSIVE ===
+- The flex-expand is hover-driven; on touch/mobile it should fall back to 3 equal 
+  stacked panels (flex-col) so mobile users see all three with their text.
+- Respect prefers-reduced-motion: if set, disable the flex-grow animation (panels stay 
+  equal), keep hover color only.
+- Ensure headlines remain legible at the shrunken (0.5 flex) width — truncate to 2-3 
+  lines if needed.
+
+=== STILL FOR THE AGENT ===
+- Confirm the 3 insight images exist at /public/images/insights/.
+- Match the section background to the site-wide dark token from the theme pass.

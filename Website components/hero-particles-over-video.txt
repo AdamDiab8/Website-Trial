@@ -1,0 +1,183 @@
+You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure
+- Tailwind CSS
+- Typescript
+
+If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
+
+Determine the default path for components and styles.
+If default path for components is not /components/ui, provide instructions on why it's important to create this folder.
+
+=== USE CASE FOR THIS PROJECT ===
+This is the HERO SECTION of a Nokia homepage clone. The particle network must render
+as a TRANSPARENT OVERLAY on top of a looping background <video>, with the headline,
+CTA, and slide tabs layered above it. It is NOT a standalone full-screen background.
+
+Layer stack (bottom to top):
+  z-0  : full-bleed looping <video autoPlay muted loop playsInline> (default src: /videos/hero-ran.mp4)
+  z-0  : dark overlay div (bg-black/40) so white text stays readable
+  z-10 : the ParticlesComponent below (transparent bg, Nokia-blue particles)
+  z-20 : headline "Nokia defines the next era of radio with the industry's first
+         AI-native RAN platform" (white, bold) + CTA button "Watch our Summer launch"
+  below hero: 4 clickable slide tabs that swap the <video> src + headline:
+         "AI-RAN Summer launch" (hero-ran.mp4) |
+         "Modern data center networks" (hero-datacenter.mp4) |
+         "Autonomous Networks" (hero-autonomous.jpg) |
+         "Broadband access networks" (hero-broadband.mp4)
+
+Copy-paste this component to /components/ui folder:
+```tsx
+particles-bg.tsx
+"use client";
+
+import { useEffect, useCallback } from "react";
+
+export default function ParticlesComponent() {
+  const initParticles = useCallback(() => {
+    // Respect reduced-motion: do not run the animation at all
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Skip on small screens for performance (video + text only)
+    if (window.innerWidth < 768) return;
+
+    // cleanup old canvas
+    const oldCanvas = document.querySelector("#particles-js canvas");
+    if (oldCanvas) oldCanvas.remove();
+
+    // @ts-ignore
+    if (window.pJSDom?.length > 0) {
+      // @ts-ignore
+      window.pJSDom.forEach((p) => p.pJS.fn.vendors.destroypJS());
+      // @ts-ignore
+      window.pJSDom = [];
+    }
+
+    // Nokia blue palette (single palette — sits over a dark video overlay)
+    const colors = {
+      particles: "#124191",
+      lines: "#124191",
+      accent: "#1e5bb8",
+    };
+
+    // @ts-ignore
+    window.particlesJS("particles-js", {
+      particles: {
+        number: { value: 90, density: { enable: true, value_area: 900 } },
+        color: { value: colors.particles },
+        shape: { type: "circle", stroke: { width: 0.5, color: colors.accent } },
+        opacity: {
+          value: 0.6,
+          random: true,
+          anim: { enable: true, speed: 1, opacity_min: 0.25 },
+        },
+        size: {
+          value: 3,
+          random: true,
+          anim: { enable: true, speed: 2, size_min: 1 },
+        },
+        line_linked: {
+          enable: true,
+          distance: 160,
+          color: colors.lines,
+          opacity: 0.35,
+          width: 1.1,
+        },
+        move: { enable: true, speed: 2, random: true, out_mode: "bounce" },
+      },
+      interactivity: {
+        detect_on: "canvas",
+        events: {
+          onhover: { enable: true, mode: "grab" },
+          onclick: { enable: true, mode: "push" },
+          resize: true,
+        },
+        modes: {
+          grab: { distance: 220, line_linked: { opacity: 0.8 } },
+          push: { particles_nb: 4 },
+          repulse: { distance: 180, duration: 0.4 },
+        },
+      },
+      retina_detect: true,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const script = document.createElement("script");
+    script.src =
+      "https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      initParticles();
+    };
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, [initParticles]);
+
+  // Transparent container so the background <video> shows through.
+  // Positioned absolute to fill the hero; parent hero must be position:relative.
+  return (
+    <div
+      id="particles-js"
+      className="w-full h-full absolute top-0 left-0 z-10 bg-transparent"
+    />
+  );
+}
+
+
+demo.tsx
+// Example hero composition — the agent should adapt this into the real hero section.
+import ParticlesComponent from "@/components/ui/particles-bg";
+
+export default function HeroDemo() {
+  return (
+    <section className="relative w-full h-screen overflow-hidden">
+      {/* z-0: background video */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover z-0"
+        src="/videos/hero-ran.mp4"
+      />
+      {/* z-0: dark overlay for text legibility */}
+      <div className="absolute inset-0 bg-black/40 z-0" />
+      {/* z-10: particle network overlay (Nokia blue, transparent bg) */}
+      <ParticlesComponent />
+      {/* z-20: headline + CTA */}
+      <div className="relative z-20 h-full flex flex-col justify-center max-w-7xl mx-auto px-6">
+        <h1 className="text-white font-bold text-4xl md:text-5xl lg:text-6xl max-w-4xl">
+          Nokia defines the next era of radio with the industry&apos;s first
+          AI-native RAN platform
+        </h1>
+        <button className="mt-8 w-fit bg-[#124191] hover:bg-[#0d3271] text-white px-6 py-3 rounded font-semibold transition-colors">
+          Watch our Summer launch
+        </button>
+      </div>
+    </section>
+  );
+}
+```
+
+=== AMENDMENTS ALREADY MADE vs the stock 21st.dev component ===
+1. Removed the built-in gradient background classes; container is now bg-transparent
+   so the <video> shows behind it.
+2. Recolored particles + lines from cyan (#00f5ff) to Nokia blue (#124191);
+   dropped the separate dark/light palettes (single palette over dark overlay).
+3. Lowered particle count 140 -> 90 and opacities for a subtle over-video accent.
+4. Added prefers-reduced-motion guard (no animation if user opts out).
+5. Added mobile guard (<768px: skip particles, show video + text only).
+6. Removed the 21st.dev theme-toggle MutationObserver (not needed on this site).
+
+=== STILL FOR THE AGENT TO DO ===
+- Wire the 4 slide tabs to swap the <video> src + headline text.
+- Ensure the hero <section> is position:relative so the absolute layers anchor to it.
+- Videos live in /public/videos/ (hero-ran.mp4, hero-datacenter.mp4, hero-broadband.mp4);
+  hero-autonomous.jpg is an <img> slide instead of video.

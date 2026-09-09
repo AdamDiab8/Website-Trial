@@ -1,0 +1,247 @@
+You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure
+- Tailwind CSS
+- Typescript
+
+If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
+
+Determine the default path for components and styles.
+If default path for components is not /components/ui, provide instructions on why it's important to create this folder.
+
+=== USE CASE FOR THIS PROJECT ===
+This is the GLOBAL NETWORK band (sits with section 7, near "Explore the latest from Nokia" /
+Latest news) of a Nokia homepage clone. Animated arcs connect Nokia's HQ (Espoo, Finland)
+to real cities from Nokia's actual news stories — Saudi Arabia, Indonesia (Indosat), Kenya,
+India, USA — reinforcing that Nokia is a GLOBAL network company. Arc/dot color recolored to
+Nokia blue (#124191). Demo copy replaced with Nokia messaging.
+
+INSTALL NPM DEPENDENCIES FIRST:
+  npm install dotted-map framer-motion
+  (This project also uses next/image and next-themes per the stock component. If this is a
+   NON-Next project, see the "NON-NEXT NOTE" at the bottom of this file.)
+
+Copy-paste this component to /components/ui folder:
+```tsx
+world-map.tsx
+"use client";
+
+import { useRef, useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import DottedMap from "dotted-map";
+import Image from "next/image";
+
+interface MapProps {
+  dots?: Array<{
+    start: { lat: number; lng: number; label?: string };
+    end: { lat: number; lng: number; label?: string };
+  }>;
+  lineColor?: string;
+}
+
+export function WorldMap({
+  dots = [],
+  lineColor = "#124191", // Nokia blue (was #0ea5e9)
+}: MapProps) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const map = new DottedMap({ height: 100, grid: "diagonal" });
+
+  // Reduced-motion: skip the drawing animation, render arcs fully drawn
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setReduceMotion(
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    }
+  }, []);
+
+  // Force dark map to match the Nokia site (was theme-dependent via next-themes)
+  const svgMap = map.getSVG({
+    radius: 0.22,
+    color: "#FFFFFF40",
+    shape: "circle",
+    backgroundColor: "#0a0f1a",
+  });
+
+  const projectPoint = (lat: number, lng: number) => {
+    const x = (lng + 180) * (800 / 360);
+    const y = (90 - lat) * (400 / 180);
+    return { x, y };
+  };
+
+  const createCurvedPath = (
+    start: { x: number; y: number },
+    end: { x: number; y: number }
+  ) => {
+    const midX = (start.x + end.x) / 2;
+    const midY = Math.min(start.y, end.y) - 50;
+    return `M ${start.x} ${start.y} Q ${midX} ${midY} ${end.x} ${end.y}`;
+  };
+
+  return (
+    <div className="w-full aspect-[2/1] bg-[#0a0f1a] rounded-lg relative font-sans">
+      <Image
+        src={`data:image/svg+xml;utf8,${encodeURIComponent(svgMap)}`}
+        className="h-full w-full [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)] pointer-events-none select-none"
+        alt="world map"
+        height="495"
+        width="1056"
+        draggable={false}
+      />
+      <svg
+        ref={svgRef}
+        viewBox="0 0 800 400"
+        className="w-full h-full absolute inset-0 pointer-events-none select-none"
+      >
+        {dots.map((dot, i) => {
+          const startPoint = projectPoint(dot.start.lat, dot.start.lng);
+          const endPoint = projectPoint(dot.end.lat, dot.end.lng);
+          return (
+            <g key={`path-group-${i}`}>
+              <motion.path
+                d={createCurvedPath(startPoint, endPoint)}
+                fill="none"
+                stroke="url(#path-gradient)"
+                strokeWidth="1"
+                initial={{ pathLength: reduceMotion ? 1 : 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{
+                  duration: reduceMotion ? 0 : 1,
+                  delay: reduceMotion ? 0 : 0.5 * i,
+                  ease: "easeOut",
+                }}
+                key={`start-upper-${i}`}
+              ></motion.path>
+            </g>
+          );
+        })}
+
+        <defs>
+          <linearGradient id="path-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="white" stopOpacity="0" />
+            <stop offset="5%" stopColor={lineColor} stopOpacity="1" />
+            <stop offset="95%" stopColor={lineColor} stopOpacity="1" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {dots.map((dot, i) => (
+          <g key={`points-group-${i}`}>
+            <g key={`start-${i}`}>
+              <circle
+                cx={projectPoint(dot.start.lat, dot.start.lng).x}
+                cy={projectPoint(dot.start.lat, dot.start.lng).y}
+                r="2"
+                fill={lineColor}
+              />
+              <circle
+                cx={projectPoint(dot.start.lat, dot.start.lng).x}
+                cy={projectPoint(dot.start.lat, dot.start.lng).y}
+                r="2"
+                fill={lineColor}
+                opacity="0.5"
+              >
+                <animate attributeName="r" from="2" to="8" dur="1.5s" begin="0s" repeatCount="indefinite" />
+                <animate attributeName="opacity" from="0.5" to="0" dur="1.5s" begin="0s" repeatCount="indefinite" />
+              </circle>
+            </g>
+            <g key={`end-${i}`}>
+              <circle
+                cx={projectPoint(dot.end.lat, dot.end.lng).x}
+                cy={projectPoint(dot.end.lat, dot.end.lng).y}
+                r="2"
+                fill={lineColor}
+              />
+              <circle
+                cx={projectPoint(dot.end.lat, dot.end.lng).x}
+                cy={projectPoint(dot.end.lat, dot.end.lng).y}
+                r="2"
+                fill={lineColor}
+                opacity="0.5"
+              >
+                <animate attributeName="r" from="2" to="8" dur="1.5s" begin="0s" repeatCount="indefinite" />
+                <animate attributeName="opacity" from="0.5" to="0" dur="1.5s" begin="0s" repeatCount="indefinite" />
+              </circle>
+            </g>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+
+demo.tsx
+"use client";
+import { WorldMap } from "@/components/ui/world-map";
+import { motion } from "framer-motion";
+
+export function WorldMapDemo() {
+  return (
+    <div className="py-40 bg-[#0a0f1a] w-full">
+      <div className="max-w-7xl mx-auto text-center px-4">
+        <p className="font-bold text-xl md:text-4xl text-white">
+          A global{" "}
+          <span className="text-neutral-400">
+            {"network".split("").map((letter, idx) => (
+              <motion.span
+                key={idx}
+                className="inline-block"
+                initial={{ x: -10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.5, delay: idx * 0.04 }}
+              >
+                {letter}
+              </motion.span>
+            ))}
+          </span>
+        </p>
+        <p className="text-sm md:text-lg text-neutral-400 max-w-2xl mx-auto py-4">
+          From our headquarters in Espoo to networks on every continent — Nokia is
+          advancing connectivity for the AI era, worldwide.
+        </p>
+      </div>
+      <WorldMap
+        dots={[
+          // Espoo HQ -> Riyadh (Saudi Arabia R&D center / ACES broadband)
+          { start: { lat: 60.1699, lng: 24.9384 }, end: { lat: 24.7136, lng: 46.6753 } },
+          // Espoo HQ -> Jakarta (Indosat / Ooredoo / Zankore)
+          { start: { lat: 60.1699, lng: 24.9384 }, end: { lat: -6.2088, lng: 106.8456 } },
+          // Espoo HQ -> Nairobi (emerging-market connectivity)
+          { start: { lat: 60.1699, lng: 24.9384 }, end: { lat: -1.2921, lng: 36.8219 } },
+          // Espoo HQ -> New Delhi (India operations)
+          { start: { lat: 60.1699, lng: 24.9384 }, end: { lat: 28.6139, lng: 77.209 } },
+          // Espoo HQ -> Dallas (Nokia North America / Federal)
+          { start: { lat: 60.1699, lng: 24.9384 }, end: { lat: 32.7767, lng: -96.797 } },
+          // Riyadh -> Jakarta (region-to-region link, shows mesh not just spokes)
+          { start: { lat: 24.7136, lng: 46.6753 }, end: { lat: -6.2088, lng: 106.8456 } },
+        ]}
+      />
+    </div>
+  );
+}
+```
+
+=== AMENDMENTS ALREADY MADE vs the stock 21st.dev component ===
+1. Replaced demo arcs (Alaska/LA/Brazil/Vladivostok, generic) with REAL Nokia-story
+   routes anchored on Espoo HQ: Riyadh (Saudi R&D + ACES), Jakarta (Indosat/Zankore),
+   Nairobi, New Delhi, Dallas, plus one Riyadh->Jakarta cross-link.
+2. Recolored lineColor default from #0ea5e9 (sky) to #124191 (Nokia blue) — arcs + dots.
+3. Forced the map to a fixed dark palette (bg #0a0f1a) instead of reading next-themes,
+   so it always matches the Nokia site. Removed the useTheme import/usage.
+4. Replaced demo copy ("Remote Connectivity / Nomads and Travellers") with
+   "A global network" + Nokia's global-connectivity line.
+5. Added prefers-reduced-motion handling: arcs render fully drawn (pathLength 1, no
+   staggered draw) when the user opts out.
+
+=== STILL FOR THE AGENT TO DO ===
+- Place this band near the Latest-news / insights section (7).
+- Adjust city list if you want it to mirror the exact current news items on the page.
+
+=== NON-NEXT NOTE (only if this is a Vite/CRA project, not Next.js) ===
+- Replace `import Image from "next/image"` with a plain <img>:
+    <img src={`data:image/svg+xml;utf8,${encodeURIComponent(svgMap)}`}
+         className="..." alt="world map" draggable={false} />
+- next-themes was already removed, so no other Next-specific dependency remains.

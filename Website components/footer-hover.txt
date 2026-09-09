@@ -1,0 +1,354 @@
+You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure
+- Tailwind CSS
+- Typescript
+
+If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
+
+Determine the default path for components and styles.
+If default path for components is not /components/ui, provide instructions on why it's important to create this folder.
+
+=== USE CASE FOR THIS PROJECT ===
+This is the FOOTER (section 8) of a Nokia homepage clone. The reusable TextHoverEffect +
+FooterBackgroundGradient go in /components/ui/hover-footer.tsx (rainbow hover recolored to
+Nokia blue). The demo is rewritten with Nokia's real footer menus, support links, social
+icons, and a giant "NOKIA" hover-reveal wordmark.
+
+INSTALL NPM DEPENDENCIES FIRST:
+  npm install motion
+  (lucide-react is also used for icons; install it if not already present:
+   npm install lucide-react)
+  (Requires @/lib/utils with a `cn` helper — standard in shadcn projects. If missing,
+   run `npx shadcn@latest init` or add the cn util.)
+
+Copy-paste this component to /components/ui folder:
+```tsx
+hover-footer.tsx
+"use client";
+import React, { useRef, useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { cn } from "@/lib/utils";
+
+export const TextHoverEffect = ({
+  text,
+  duration,
+  className,
+}: {
+  text: string;
+  duration?: number;
+  automatic?: boolean;
+  className?: string;
+}) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [cursor, setCursor] = useState({ x: 0, y: 0 });
+  const [hovered, setHovered] = useState(false);
+  const [maskPosition, setMaskPosition] = useState({ cx: "50%", cy: "50%" });
+
+  useEffect(() => {
+    if (svgRef.current && cursor.x !== null && cursor.y !== null) {
+      const svgRect = svgRef.current.getBoundingClientRect();
+      const cxPercentage = ((cursor.x - svgRect.left) / svgRect.width) * 100;
+      const cyPercentage = ((cursor.y - svgRect.top) / svgRect.height) * 100;
+      setMaskPosition({
+        cx: `${cxPercentage}%`,
+        cy: `${cyPercentage}%`,
+      });
+    }
+  }, [cursor]);
+
+  return (
+    <svg
+      ref={svgRef}
+      width="100%"
+      height="100%"
+      viewBox="0 0 300 100"
+      xmlns="http://www.w3.org/2000/svg"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onMouseMove={(e) => setCursor({ x: e.clientX, y: e.clientY })}
+      className={cn("select-none uppercase cursor-pointer", className)}
+    >
+      <defs>
+        <linearGradient
+          id="textGradient"
+          gradientUnits="userSpaceOnUse"
+          cx="50%"
+          cy="50%"
+          r="25%"
+        >
+          {hovered && (
+            <>
+              {/* Nokia-blue monochrome reveal (was rainbow: yellow/red/green/cyan/violet) */}
+              <stop offset="0%" stopColor="#1e5bb8" />
+              <stop offset="50%" stopColor="#124191" />
+              <stop offset="100%" stopColor="#0d3271" />
+            </>
+          )}
+        </linearGradient>
+
+        <motion.radialGradient
+          id="revealMask"
+          gradientUnits="userSpaceOnUse"
+          r="20%"
+          initial={{ cx: "50%", cy: "50%" }}
+          animate={maskPosition}
+          transition={{ duration: duration ?? 0, ease: "easeOut" }}
+        >
+          <stop offset="0%" stopColor="white" />
+          <stop offset="100%" stopColor="black" />
+        </motion.radialGradient>
+        <mask id="textMask">
+          <rect
+            x="0"
+            y="0"
+            width="100%"
+            height="100%"
+            fill="url(#revealMask)"
+          />
+        </mask>
+      </defs>
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        strokeWidth="0.3"
+        className="fill-transparent stroke-neutral-200 font-[helvetica] text-7xl font-bold dark:stroke-neutral-800"
+        style={{ opacity: hovered ? 0.7 : 0 }}
+      >
+        {text}
+      </text>
+      <motion.text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        strokeWidth="0.3"
+        className="fill-transparent stroke-[#3ca2fa] font-[helvetica] text-7xl font-bold
+        dark:stroke-[#3ca2fa99]"
+        initial={{ strokeDashoffset: 1000, strokeDasharray: 1000 }}
+        animate={{
+          strokeDashoffset: 0,
+          strokeDasharray: 1000,
+        }}
+        transition={{
+          duration: 4,
+          ease: "easeInOut",
+        }}
+      >
+        {text}
+      </motion.text>
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        stroke="url(#textGradient)"
+        strokeWidth="0.3"
+        mask="url(#textMask)"
+        className="fill-transparent font-[helvetica] text-7xl font-bold"
+      >
+        {text}
+      </text>
+    </svg>
+  );
+};
+
+
+export const FooterBackgroundGradient = () => {
+  return (
+    <div
+      className="absolute inset-0 z-0"
+      style={{
+        // Nokia-blue radial wash (was #3ca2fa33 sky tint)
+        background:
+          "radial-gradient(125% 125% at 50% 10%, #0F0F1166 50%, #12419133 100%)",
+      }}
+    />
+  );
+};
+
+demo.tsx
+"use client";
+import React from "react";
+import {
+  Instagram,
+  Youtube,
+  Twitter,
+  Facebook,
+  Linkedin,
+} from "lucide-react";
+import { FooterBackgroundGradient } from "@/components/ui/hover-footer";
+import { TextHoverEffect } from "@/components/ui/hover-footer";
+
+function HoverFooter() {
+  // Nokia footer menus (was About Us / Helpful Links)
+  const footerLinks = [
+    {
+      title: "Solutions for",
+      links: [
+        { label: "AI and cloud providers", href: "#" },
+        { label: "Mission critical enterprises", href: "#" },
+        { label: "Telecommunication providers", href: "#" },
+      ],
+    },
+    {
+      title: "Insights",
+      links: [
+        { label: "Blog", href: "#" },
+        { label: "Learning at Nokia", href: "#" },
+        { label: "Nokia Bell Labs", href: "#" },
+        { label: "Technology explained", href: "#" },
+        { label: "Standardization", href: "#" },
+        { label: "Webinars", href: "#" },
+      ],
+    },
+    {
+      title: "We are Nokia",
+      links: [
+        { label: "Newsroom", href: "#" },
+        { label: "Careers", href: "#" },
+        { label: "Investors", href: "#" },
+        { label: "Sustainability", href: "#" },
+        { label: "Customer success", href: "#" },
+      ],
+    },
+  ];
+
+  // Support links (was contact info with email/phone)
+  const supportLinks = [
+    { label: "Contact us", href: "#" },
+    { label: "Extranet access", href: "#" },
+    { label: "Find a partner", href: "#" },
+    { label: "Support", href: "#" },
+  ];
+
+  // Nokia social icons (was Facebook/Instagram/Twitter/Dribbble/Globe)
+  const socialLinks = [
+    { icon: <Instagram size={20} />, label: "Instagram", href: "https://www.instagram.com/nokia/" },
+    { icon: <Youtube size={20} />, label: "YouTube", href: "https://www.youtube.com/user/nokia" },
+    { icon: <Twitter size={20} />, label: "X", href: "https://twitter.com/nokia" },
+    { icon: <Facebook size={20} />, label: "Facebook", href: "https://www.facebook.com/nokia/" },
+    { icon: <Linkedin size={20} />, label: "LinkedIn", href: "https://www.linkedin.com/company/nokia" },
+  ];
+
+  return (
+    <footer className="bg-[#0F0F11]/10 relative h-fit rounded-3xl overflow-hidden m-8 text-neutral-400">
+      <div className="max-w-7xl mx-auto p-14 z-40 relative">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 md:gap-8 lg:gap-16 pb-12">
+          {/* Brand + newsletter */}
+          <div className="flex flex-col space-y-4">
+            <span className="text-white text-3xl font-bold tracking-tight">NOKIA</span>
+            <p className="text-sm leading-relaxed">
+              Advancing connectivity for the AI era across fixed, mobile and
+              transport networks.
+            </p>
+            
+              href="#"
+              className="mt-2 inline-block w-fit bg-[#124191] hover:bg-[#0d3271] text-white text-sm px-4 py-2 rounded transition-colors"
+            >
+              Subscribe for our latest news
+            </a>
+          </div>
+
+          {/* Footer link sections */}
+          {footerLinks.map((section) => (
+            <div key={section.title}>
+              <h4 className="text-white text-lg font-semibold mb-6">
+                {section.title}
+              </h4>
+              <ul className="space-y-3">
+                {section.links.map((link) => (
+                  <li key={link.label} className="relative">
+                    
+                      href={link.href}
+                      className="hover:text-[#3ca2fa] transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Support row */}
+        <div className="flex flex-wrap gap-x-8 gap-y-3 pb-8">
+          {supportLinks.map((item) => (
+            
+              key={item.label}
+              href={item.href}
+              className="text-sm hover:text-[#3ca2fa] transition-colors"
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
+
+        <hr className="border-t border-gray-700 my-8" />
+
+        {/* Footer bottom */}
+        <div className="flex flex-col md:flex-row justify-between items-center text-sm space-y-4 md:space-y-0">
+          {/* Social icons */}
+          <div className="flex space-x-6 text-gray-400">
+            {socialLinks.map(({ icon, label, href }) => (
+              
+                key={label}
+                href={href}
+                aria-label={label}
+                className="hover:text-[#3ca2fa] transition-colors"
+              >
+                {icon}
+              </a>
+            ))}
+          </div>
+
+          {/* Legal bottom bar */}
+          <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center md:justify-end text-gray-500">
+            <span>&copy; {new Date().getFullYear()} Nokia all rights reserved</span>
+            <a href="#" className="hover:text-[#3ca2fa]">Cookies</a>
+            <a href="#" className="hover:text-[#3ca2fa]">Privacy notice</a>
+            <a href="#" className="hover:text-[#3ca2fa]">Terms of use</a>
+            <a href="#" className="hover:text-[#3ca2fa]">Inclusive terminology</a>
+            <a href="#" className="hover:text-[#3ca2fa]">Modern slavery statement</a>
+          </div>
+        </div>
+      </div>
+
+      {/* Giant NOKIA hover-reveal wordmark */}
+      <div className="lg:flex hidden h-[30rem] -mt-52 -mb-36">
+        <TextHoverEffect text="NOKIA" className="z-50" />
+      </div>
+
+      <FooterBackgroundGradient />
+    </footer>
+  );
+}
+
+export default HoverFooter;
+```
+
+=== AMENDMENTS ALREADY MADE vs the stock 21st.dev component ===
+1. Recolored the hover reveal from a 5-stop rainbow (yellow/red/green/cyan/violet) to a
+   Nokia-blue monochrome ramp (#1e5bb8 / #124191 / #0d3271).
+2. Recolored FooterBackgroundGradient tint from #3ca2fa33 to #12419133 (Nokia blue).
+3. Replaced all demo content with Nokia's real footer:
+   - Menus: "Solutions for", "Insights", "We are Nokia" (exact link labels from the site).
+   - Support row: Contact us / Extranet access / Find a partner / Support.
+   - Brand block: "NOKIA" + positioning line + "Subscribe for our latest news" button.
+   - Legal bottom bar: ©2026 + Cookies / Privacy / Terms / Inclusive terminology /
+     Modern slavery statement.
+4. Swapped social icons to Nokia's real set (Instagram, YouTube, X, Facebook, LinkedIn)
+   with real profile URLs; removed Dribbble/Globe and the mailto/tel contact block.
+5. Giant hover-reveal wordmark text changed "Nurui" -> "NOKIA".
+
+=== NOTES / STILL FOR THE AGENT TO DO ===
+- The stroke-[#3ca2fa] on the animated outline text is left as-is (it's a light blue that
+  reads fine over the dark footer). Optionally change to #124191 for strict brand match.
+- The giant hover wordmark is desktop-only (lg:flex hidden) by design — it does not need a
+  mobile fallback. It's cursor-driven, so it degrades gracefully with no motion on touch.
+- Consumer note from the real site ("Looking for Nokia licensed products support?") was
+  omitted for simplicity — add a small link row if you want full parity.
